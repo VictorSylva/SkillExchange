@@ -11,7 +11,7 @@ const Footer = () => {
           {/* Brand Section */}
           <div className="col-span-1 md:col-span-2">
             <Link to="/" className="text-2xl font-bold bg-gradient-to-r from-primary-400 to-primary-500 bg-clip-text text-transparent hover:from-primary-300 hover:to-primary-400 transition-all duration-300">
-              SkillShare
+              YESSkillExchange
             </Link>
             <p className="mt-4 text-gray-300 max-w-md leading-relaxed">
               Connect with learners worldwide. Share your skills, learn new ones, and grow together in our supportive community.
@@ -177,7 +177,7 @@ const Footer = () => {
               </Link>
             </div>
             <div className="text-sm text-gray-500">
-              © {currentYear} SkillShare. All rights reserved.
+              © {currentYear} YESSkillExchange. All rights reserved.
             </div>
           </div>
         </div>

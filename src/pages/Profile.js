@@ -13,7 +13,7 @@ import Footer from '../components/Footer';
 const Profile = () => {
   const { userId } = useParams();
   const location = useLocation();
-  const { currentUser, userProfile, updateUserProfile: updateProfile } = useAuth();
+  const { currentUser, userProfile, updateUserProfile: updateProfile, refreshUserProfile } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -143,6 +143,8 @@ const Profile = () => {
       if (result.success) {
         setProfile(prev => ({ ...prev, ...formData }));
         setEditing(false);
+        // Refresh the user profile to ensure navbar and dashboard are updated
+        await refreshUserProfile();
       } else {
         setError(result.error);
       }

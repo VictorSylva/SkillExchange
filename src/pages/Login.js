@@ -53,7 +53,7 @@ const Login = () => {
         <div className="text-center">
           <Link to="/" className="inline-block">
             <h1 className="text-4xl font-bold text-gradient mb-2 hover:scale-105 transition-transform duration-200">
-              SkillShare
+              YESSkillExchange
             </h1>
           </Link>
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">

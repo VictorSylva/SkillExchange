@@ -46,7 +46,7 @@ const Navigation = () => {
                 to="/" 
                 className="text-2xl font-bold bg-gradient-to-r from-primary-400 to-primary-500 bg-clip-text text-transparent hover:from-primary-300 hover:to-primary-400 transition-all duration-300"
               >
-                SkillShare
+                YESSkillExchange
               </Link>
             </div>
 
@@ -108,7 +108,7 @@ const Navigation = () => {
               to="/dashboard" 
               className="text-2xl font-bold bg-gradient-to-r from-primary-400 to-primary-500 bg-clip-text text-transparent hover:from-primary-300 hover:to-primary-400 transition-all duration-300"
             >
-              SkillShare
+              YESSkillExchange
             </Link>
           </div>
 

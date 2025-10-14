@@ -152,7 +152,10 @@ export const AuthProvider = ({ children }) => {
       const result = await updateProfileService(userId, profileData);
       
       if (result.success) {
+        // Update local state immediately
         setUserProfile(prev => ({ ...prev, ...profileData }));
+        // Also refresh from Firestore to ensure consistency
+        await loadUserProfile(userId);
         return { success: true };
       } else {
         return { success: false, error: result.error };
@@ -160,6 +163,13 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Error updating user profile:', error);
       return { success: false, error: error.message };
+    }
+  };
+
+  // Refresh user profile from Firestore
+  const refreshUserProfile = async () => {
+    if (currentUser) {
+      await loadUserProfile(currentUser.uid);
     }
   };
 
@@ -187,6 +197,7 @@ export const AuthProvider = ({ children }) => {
     signInWithGoogle,
     logout,
     updateUserProfile,
+    refreshUserProfile,
     loading
   };
 
