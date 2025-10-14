@@ -51,28 +51,28 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
       {/* Navigation */}
-      <nav className="relative z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
+      <nav className="relative z-50 bg-gradient-to-r from-gray-800 via-gray-900 to-gray-800 border-b border-gray-700 sticky top-0 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Link to="/" className="text-2xl font-bold bg-gradient-to-r from-red-500 to-red-600 bg-clip-text text-transparent">
+              <Link to="/" className="text-2xl font-bold bg-gradient-to-r from-primary-400 to-primary-500 bg-clip-text text-transparent hover:from-primary-300 hover:to-primary-400 transition-all duration-300">
                 YESSkillExchange
               </Link>
             </div>
             <div className="hidden md:flex items-center space-x-8">
-              <Link to="/browse" className="text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200">
+              <Link to="/browse" className="text-gray-300 hover:text-primary-400 font-medium transition-colors duration-200">
                 Browse
               </Link>
-              <Link to="/login" className="text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200">
+              <Link to="/login" className="text-gray-300 hover:text-primary-400 font-medium transition-colors duration-200">
                 Learn
               </Link>
-              <Link to="/login" className="text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200">
+              <Link to="/login" className="text-gray-300 hover:text-primary-400 font-medium transition-colors duration-200">
                 Teach
               </Link>
-              <Link to="/login" className="text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200">
+              <Link to="/login" className="text-gray-300 hover:text-primary-400 font-medium transition-colors duration-200">
                 Connections
               </Link>
-              <Link to="/login" className="text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200">
+              <Link to="/login" className="text-gray-300 hover:text-primary-400 font-medium transition-colors duration-200">
                 Sign In
               </Link>
               <Button 
@@ -101,14 +101,14 @@ const Landing = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             {/* Left Column - Content */}
             <div className="text-center lg:text-left">
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-8 leading-tight">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-8 leading-tight">
                 <span className="block">Connect with</span>
                 <span className="block bg-gradient-to-r from-red-500 to-red-600 bg-clip-text text-transparent">
                   amazing people
                 </span>
                 <span className="block">and exchange skills</span>
-              </h1>
-              
+          </h1>
+
               <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
                 Join a collaborative learning environment where you can share your expertise and learn from others. Connect with learners worldwide and grow together.
               </p>
@@ -156,22 +156,22 @@ const Landing = () => {
                   <div className="text-center mb-8">
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">
                       Welcome back
-                    </h2>
-                    <p className="text-gray-600">
+                  </h2>
+                  <p className="text-gray-600">
                       Sign in to continue your learning journey
-                    </p>
-                  </div>
+                  </p>
+                </div>
 
-                  {error && (
+                {error && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
-                      <div className="flex items-center">
-                        <svg className="h-5 w-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                        </svg>
-                        {error}
-                      </div>
+                    <div className="flex items-center">
+                      <svg className="h-5 w-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                      {error}
                     </div>
-                  )}
+                  </div>
+                )}
 
                   {/* Email Input */}
                   <div className="mb-4">
@@ -215,11 +215,11 @@ const Landing = () => {
                     Don't have an account?{' '}
                     <Link to="/register" className="text-red-500 hover:text-red-600 font-semibold">
                       Create one here
-                    </Link>
-                  </p>
-                </div>
-              </Card>
-            </div>
+                  </Link>
+                </p>
+              </div>
+            </Card>
+          </div>
           </div>
         </div>
       </section>
@@ -234,7 +234,7 @@ const Landing = () => {
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Connect with learners worldwide. Share your skills, learn new ones, and grow together in our supportive community.
             </p>
-          </div>
+            </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             {/* Learn Section */}
@@ -243,8 +243,8 @@ const Landing = () => {
                 <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mr-4">
                   <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                  </svg>
-                </div>
+                </svg>
+              </div>
                 <h3 className="text-2xl font-bold text-gray-900">LEARN</h3>
               </div>
               <ul className="space-y-4">
@@ -281,8 +281,8 @@ const Landing = () => {
                 <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center mr-4">
                   <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                  </svg>
-                </div>
+                </svg>
+              </div>
                 <h3 className="text-2xl font-bold text-gray-900">TEACH</h3>
               </div>
               <ul className="space-y-4">
@@ -342,9 +342,9 @@ const Landing = () => {
                   <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.174-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.402.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.357-.629-2.746-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24.009 12.017 24c6.624 0 11.99-5.367 11.99-11.987C24.007 5.367 18.641.001 12.017.001z"/>
                 </svg>
               </a>
-            </div>
           </div>
         </div>
+      </div>
       </section>
 
       <Footer />

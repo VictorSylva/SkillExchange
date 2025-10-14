@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
-import Footer from '../components/Footer';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -125,8 +124,6 @@ const Login = () => {
           </p>
         </div>
       </div>
-      
-      <Footer />
     </div>
   );
 };

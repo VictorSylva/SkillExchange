@@ -69,7 +69,6 @@ function App() {
               path="/" 
               element={
                 <LandingRoute>
-                  <Navigation />
                   <Landing />
                 </LandingRoute>
               } 
