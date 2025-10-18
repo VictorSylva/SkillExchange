@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { findPotentialMatches, createMatchRequest, getUserMatches, getUserNotifications, acceptMatchRequest, rejectMatchRequest, getAllPublicCourses, getConnectedUsersCourses } from '../firebase/services';
+import { useProgress } from '../hooks/useProgress';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import SkillTag from '../components/ui/SkillTag';
@@ -12,6 +13,7 @@ import CourseViewer from '../components/ui/CourseViewer';
 
 const Dashboard = () => {
   const { currentUser, userProfile } = useAuth();
+  const { getCourseProgress } = useProgress();
   const [matches, setMatches] = useState([]);
   const [connectedMatches, setConnectedMatches] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -430,6 +432,7 @@ const Dashboard = () => {
                     thumbnail={course.thumbnailUrl}
                     thumbnailUrl={course.thumbnailUrl}
                     previewVideoUrl={course.previewVideoUrl}
+                    progress={getCourseProgress(course.id)}
                     onBookmark={handleBookmark}
                     onClick={() => setSelectedCourse(course)}
                     className="animate-slide-up"

@@ -75,6 +75,37 @@ export const updateUserProfile = async (userId, userData) => {
   }
 };
 
+export const getAllUsers = async () => {
+  try {
+    const usersRef = collection(db, 'users');
+    const usersSnapshot = await getDocs(usersRef);
+    
+    const allUsers = [];
+    
+    usersSnapshot.forEach((userDoc) => {
+      const userData = userDoc.data();
+      allUsers.push({
+        uid: userDoc.id,
+        ...userData,
+        createdAt: userData.createdAt?.toDate?.() || new Date(userData.createdAt),
+        updatedAt: userData.updatedAt?.toDate?.() || new Date(userData.updatedAt)
+      });
+    });
+    
+    // Sort by creation date (newest first)
+    allUsers.sort((a, b) => {
+      const dateA = a.createdAt || new Date(0);
+      const dateB = b.createdAt || new Date(0);
+      return dateB - dateA;
+    });
+    
+    return { success: true, data: allUsers };
+  } catch (error) {
+    console.error('Error fetching all users:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // Course Services
 export const getAllPublicCourses = async () => {
   try {
@@ -591,6 +622,122 @@ export const deleteFile = async (path) => {
     return { success: true };
   } catch (error) {
     console.error('Error deleting file:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Progress Tracking Services
+export const saveCourseProgress = async (userId, courseId, progressData) => {
+  try {
+    const progressRef = doc(db, 'courseProgress', `${userId}_${courseId}`);
+    await setDoc(progressRef, {
+      userId,
+      courseId,
+      ...progressData,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving course progress:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const getCourseProgress = async (userId, courseId) => {
+  try {
+    const progressRef = doc(db, 'courseProgress', `${userId}_${courseId}`);
+    const progressSnap = await getDoc(progressRef);
+    
+    if (progressSnap.exists()) {
+      return { success: true, data: progressSnap.data() };
+    } else {
+      return { success: true, data: null };
+    }
+  } catch (error) {
+    console.error('Error getting course progress:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const getAllUserProgress = async (userId) => {
+  try {
+    const progressRef = collection(db, 'courseProgress');
+    const q = query(progressRef, where('userId', '==', userId));
+    const progressSnapshot = await getDocs(q);
+    
+    const allProgress = [];
+    progressSnapshot.forEach((doc) => {
+      allProgress.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    return { success: true, data: allProgress };
+  } catch (error) {
+    console.error('Error getting all user progress:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const markLessonComplete = async (userId, courseId, sectionIndex, lessonIndex) => {
+  try {
+    const progressRef = doc(db, 'courseProgress', `${userId}_${courseId}`);
+    const progressSnap = await getDoc(progressRef);
+    
+    let progressData = {};
+    if (progressSnap.exists()) {
+      progressData = progressSnap.data();
+    }
+    
+    // Initialize progress data if it doesn't exist
+    if (!progressData.completedLessons) {
+      progressData.completedLessons = [];
+    }
+    if (!progressData.currentSection) {
+      progressData.currentSection = 0;
+    }
+    if (!progressData.currentLesson) {
+      progressData.currentLesson = 0;
+    }
+    
+    const lessonId = `${sectionIndex}-${lessonIndex}`;
+    if (!progressData.completedLessons.includes(lessonId)) {
+      progressData.completedLessons.push(lessonId);
+    }
+    
+    // Update current position to next lesson
+    progressData.currentSection = sectionIndex;
+    progressData.currentLesson = lessonIndex + 1;
+    
+    await setDoc(progressRef, {
+      userId,
+      courseId,
+      ...progressData,
+      updatedAt: serverTimestamp()
+    });
+    
+    return { success: true, data: progressData };
+  } catch (error) {
+    console.error('Error marking lesson complete:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const updateCoursePosition = async (userId, courseId, sectionIndex, lessonIndex) => {
+  try {
+    const progressRef = doc(db, 'courseProgress', `${userId}_${courseId}`);
+    await setDoc(progressRef, {
+      userId,
+      courseId,
+      currentSection: sectionIndex,
+      currentLesson: lessonIndex,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating course position:', error);
     return { success: false, error: error.message };
   }
 };

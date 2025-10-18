@@ -31,6 +31,7 @@ const Learning = () => {
   
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteAudioRef = useRef(null);
   const messagesEndRef = useRef(null);
   const localStreamRef = useRef(null);
   const navigate = useNavigate();
@@ -42,14 +43,58 @@ const Learning = () => {
   // ✅ setupVideoCall moved up and wrapped in useCallback
   const setupVideoCall = useCallback(async () => {
     try {
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('getUserMedia is not supported in this browser');
+      }
+
+      // Check permissions first
+      try {
+        const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+        console.log('Microphone permission:', permissionStatus.state);
+      } catch (permError) {
+        console.warn('Could not check microphone permission:', permError);
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user'
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 44100
+        }
       });
       
       localStreamRef.current = stream;
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
+      }
+
+      // Log audio track information for debugging
+      const audioTracks = stream.getAudioTracks();
+      console.log('Audio tracks:', audioTracks.length);
+      if (audioTracks.length > 0) {
+        console.log('Audio track enabled:', audioTracks[0].enabled);
+        console.log('Audio track label:', audioTracks[0].label);
+        console.log('Audio track settings:', audioTracks[0].getSettings());
+      }
+
+      // Test audio output by creating a simple audio context
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioContext.createMediaStreamSource(stream);
+        const gainNode = audioContext.createGain();
+        gainNode.gain.value = 0.5; // Reduce volume to prevent feedback
+        source.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        console.log('Audio context created successfully');
+      } catch (audioError) {
+        console.warn('Could not create audio context:', audioError);
       }
 
       // For now, we'll show a placeholder for the remote video
@@ -133,7 +178,13 @@ const Learning = () => {
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
         setAudioEnabled(audioTrack.enabled);
+        console.log('Audio track toggled:', audioTrack.enabled);
+        console.log('Audio track state:', audioTrack.readyState);
+      } else {
+        console.warn('No audio track found');
       }
+    } else {
+      console.warn('No local stream found');
     }
   };
 
@@ -482,13 +533,18 @@ const Learning = () => {
                         playsInline
                         className="hidden w-full h-full object-cover"
                       />
+                      <audio
+                        ref={remoteAudioRef}
+                        autoPlay
+                        playsInline
+                        className="hidden"
+                      />
                     </div>
                     <div className="absolute top-4 right-4 w-32 h-24 bg-gray-800 rounded-lg overflow-hidden">
                       <video
                         ref={localVideoRef}
                         autoPlay
                         playsInline
-                        muted
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -507,6 +563,23 @@ const Learning = () => {
                       size="sm"
                     >
                       {videoEnabled ? '📹' : '📷'} Video
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        if (localStreamRef.current) {
+                          const audioTracks = localStreamRef.current.getAudioTracks();
+                          console.log('Audio tracks status:', audioTracks.map(track => ({
+                            enabled: track.enabled,
+                            readyState: track.readyState,
+                            label: track.label,
+                            settings: track.getSettings()
+                          })));
+                        }
+                      }}
+                    >
+                      🔍 Debug Audio
                     </Button>
                     <Button
                       variant="danger"

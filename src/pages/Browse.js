@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getAllPublicCourses, getConnectedUsersCourses } from '../firebase/services';
+import { useProgress } from '../hooks/useProgress';
 import LearningCard from '../components/ui/LearningCard';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import CourseViewer from '../components/ui/CourseViewer';
@@ -10,6 +11,7 @@ import Footer from '../components/Footer';
 const Browse = () => {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
+  const { getCourseProgress } = useProgress();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [allCourses, setAllCourses] = useState([]);
   const [connectedUsersCourses, setConnectedUsersCourses] = useState([]);
@@ -152,6 +154,7 @@ const Browse = () => {
                   thumbnail={course.thumbnailUrl}
                   thumbnailUrl={course.thumbnailUrl}
                   previewVideoUrl={course.previewVideoUrl}
+                  progress={getCourseProgress(course.id)}
                   onBookmark={handleBookmark}
                   onClick={() => setSelectedCourse(course)}
                   className="animate-slide-up"

@@ -1,13 +1,53 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { getCourseProgress, markLessonComplete, updateCoursePosition } from '../../firebase/services';
 import Card from './Card';
 import Button from './Button';
 
 const CourseViewer = ({ course, onClose }) => {
+  const { currentUser } = useAuth();
   const [currentSection, setCurrentSection] = useState(0);
   const [currentLesson, setCurrentLesson] = useState(0);
   const [completedLessons, setCompletedLessons] = useState(new Set());
   const [isMobile, setIsMobile] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Load user progress on component mount
+  useEffect(() => {
+    const loadProgress = async () => {
+      if (!currentUser || !course.id) return;
+      
+      try {
+        setLoading(true);
+        const progressResult = await getCourseProgress(currentUser.uid, course.id);
+        
+        if (progressResult.success && progressResult.data) {
+          const progress = progressResult.data;
+          
+          // Set current position
+          if (progress.currentSection !== undefined) {
+            setCurrentSection(progress.currentSection);
+          }
+          if (progress.currentLesson !== undefined) {
+            setCurrentLesson(progress.currentLesson);
+          }
+          
+          // Set completed lessons
+          if (progress.completedLessons && Array.isArray(progress.completedLessons)) {
+            setCompletedLessons(new Set(progress.completedLessons));
+          }
+        }
+      } catch (error) {
+        console.error('Error loading progress:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadProgress();
+  }, [currentUser, course.id]);
 
   // Mobile detection
   useEffect(() => {
@@ -21,14 +61,48 @@ const CourseViewer = ({ course, onClose }) => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const handleLessonComplete = (sectionIndex, lessonIndex) => {
-    const lessonId = `${sectionIndex}-${lessonIndex}`;
-    setCompletedLessons(prev => new Set([...prev, lessonId]));
+  const handleLessonComplete = async (sectionIndex, lessonIndex) => {
+    if (!currentUser || saving) return;
+    
+    try {
+      setSaving(true);
+      const lessonId = `${sectionIndex}-${lessonIndex}`;
+      
+      // Update local state
+      setCompletedLessons(prev => new Set([...prev, lessonId]));
+      
+      // Save to Firebase
+      const result = await markLessonComplete(currentUser.uid, course.id, sectionIndex, lessonIndex);
+      
+      if (!result.success) {
+        console.error('Error saving progress:', result.error);
+        // Revert local state on error
+        setCompletedLessons(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(lessonId);
+          return newSet;
+        });
+      }
+    } catch (error) {
+      console.error('Error completing lesson:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleLessonSelect = (sectionIndex, lessonIndex) => {
+  const handleLessonSelect = async (sectionIndex, lessonIndex) => {
     setCurrentSection(sectionIndex);
     setCurrentLesson(lessonIndex);
+    
+    // Save position to Firebase
+    if (currentUser) {
+      try {
+        await updateCoursePosition(currentUser.uid, course.id, sectionIndex, lessonIndex);
+      } catch (error) {
+        console.error('Error updating course position:', error);
+      }
+    }
+    
     // Close sidebar on mobile after selecting a lesson
     if (isMobile) {
       setShowSidebar(false);
@@ -39,6 +113,11 @@ const CourseViewer = ({ course, onClose }) => {
     const totalLessons = course.sections.reduce((total, section) => total + section.lessons.length, 0);
     const completedCount = completedLessons.size;
     return totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+  };
+
+  const isCourseCompleted = () => {
+    const totalLessons = course.sections.reduce((total, section) => total + section.lessons.length, 0);
+    return completedLessons.size >= totalLessons;
   };
 
   const currentLessonData = course.sections[currentSection]?.lessons[currentLesson];
@@ -90,16 +169,44 @@ const CourseViewer = ({ course, onClose }) => {
         <div className={`${isMobile ? (showSidebar ? 'fixed inset-y-0 left-0 z-50 w-80 max-w-[90vw]' : 'hidden') : 'w-1/3'} bg-gray-50 border-r border-gray-200 overflow-y-auto`}>
           <div className="p-4 sm:p-6">
             {!isMobile && (
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">{course.title}</h2>
-                <button
-                  onClick={onClose}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-3">
+                  <h2 className="text-lg font-semibold text-gray-900">{course.title}</h2>
+                  <button
+                    onClick={onClose}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                
+                {/* Progress Bar */}
+                <div className="mb-3">
+                  <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
+                    <span>Progress</span>
+                    <span>{getProgressPercentage()}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${getProgressPercentage()}%` }}
+                    />
+                  </div>
+                </div>
+                
+                {/* Course Completion Banner */}
+                {isCourseCompleted() && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+                    <div className="flex items-center">
+                      <svg className="w-4 h-4 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-green-800 text-sm font-medium">Course Completed!</span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -333,7 +440,8 @@ const CourseViewer = ({ course, onClose }) => {
                   )}
                   <Button
                     onClick={() => handleLessonComplete(currentSection, currentLesson)}
-                    disabled={completedLessons.has(`${currentSection}-${currentLesson}`)}
+                    disabled={completedLessons.has(`${currentSection}-${currentLesson}`) || saving}
+                    loading={saving}
                     size="sm"
                     className="flex-shrink-0"
                   >

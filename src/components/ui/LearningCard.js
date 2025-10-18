@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const LearningCard = ({ 
@@ -17,10 +17,38 @@ const LearningCard = ({
   isStaffPick = false,
   isBookmarked = false,
   isFromConnection = false,
+  progress = null, // New prop for progress data
   onBookmark,
   onClick,
   className = ''
 }) => {
+  const [showPreview, setShowPreview] = useState(false);
+  
+  // Debug logging for video URLs
+  React.useEffect(() => {
+    if (previewVideoUrl) {
+      console.log('LearningCard - Preview Video URL:', previewVideoUrl);
+      console.log('LearningCard - Video type:', 
+        previewVideoUrl.includes('youtube.com') || previewVideoUrl.includes('youtu.be') ? 'YouTube' :
+        previewVideoUrl.includes('vimeo.com') ? 'Vimeo' : 'Direct Video'
+      );
+      
+      // Debug YouTube URL parsing
+      if (previewVideoUrl.includes('youtube.com') || previewVideoUrl.includes('youtu.be')) {
+        let videoId = '';
+        if (previewVideoUrl.includes('youtu.be/')) {
+          videoId = previewVideoUrl.split('youtu.be/')[1].split('?')[0];
+        } else if (previewVideoUrl.includes('youtube.com/watch?v=')) {
+          videoId = previewVideoUrl.split('v=')[1].split('&')[0];
+        } else if (previewVideoUrl.includes('youtube.com/embed/')) {
+          videoId = previewVideoUrl.split('embed/')[1].split('?')[0];
+        }
+        console.log('LearningCard - YouTube Video ID:', videoId);
+        console.log('LearningCard - Generated embed URL:', `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`);
+      }
+    }
+  }, [previewVideoUrl]);
+  
   return (
     <div 
       className={`group relative bg-white rounded-2xl shadow-soft hover:shadow-large transition-all duration-300 overflow-hidden ${onClick ? 'cursor-pointer' : ''} ${className}`}
@@ -68,7 +96,13 @@ const LearningCard = ({
           <div className="w-full h-full relative">
             {previewVideoUrl.includes('youtube.com') || previewVideoUrl.includes('youtu.be') ? (
               // YouTube thumbnail with play button
-              <div className="w-full h-full relative bg-gray-900">
+              <div 
+                className="w-full h-full relative bg-gray-900 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPreview(true);
+                }}
+              >
                 <img 
                   src={`https://img.youtube.com/vi/${previewVideoUrl.includes('youtu.be/') ? previewVideoUrl.split('youtu.be/')[1].split('?')[0] : previewVideoUrl.split('v=')[1].split('&')[0]}/maxresdefault.jpg`}
                   alt={title}
@@ -90,7 +124,13 @@ const LearningCard = ({
               </div>
             ) : previewVideoUrl.includes('vimeo.com') ? (
               // Vimeo thumbnail with play button
-              <div className="w-full h-full relative bg-gray-900">
+              <div 
+                className="w-full h-full relative bg-gray-900 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPreview(true);
+                }}
+              >
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-600 to-purple-600">
                   <div className="text-center text-white">
                     <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -107,16 +147,65 @@ const LearningCard = ({
               </div>
             ) : (
               // Direct video file with thumbnail
-              <video
-                src={previewVideoUrl}
-                className="w-full h-full object-cover"
-                muted
-                loop
-                playsInline
-                poster={thumbnail || thumbnailUrl}
+              <div 
+                className="w-full h-full relative bg-gray-900 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPreview(true);
+                }}
               >
-                Your browser does not support the video tag.
-              </video>
+                <video
+                  src={previewVideoUrl}
+                  className="w-full h-full object-cover"
+                  muted
+                  loop
+                  playsInline
+                  poster={thumbnail || thumbnailUrl}
+                  onError={(e) => {
+                    console.error('Video load error in card:', e);
+                    console.error('Video URL:', previewVideoUrl);
+                    console.error('Video element:', e.target);
+                    
+                    // Show error overlay
+                    const errorOverlay = document.createElement('div');
+                    errorOverlay.className = 'absolute inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center text-white';
+                    errorOverlay.innerHTML = `
+                      <div class="text-center">
+                        <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <p class="text-sm">Video Error</p>
+                        <button onclick="window.open('${previewVideoUrl}', '_blank')" class="mt-2 px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
+                          Try in New Tab
+                        </button>
+                      </div>
+                    `;
+                    e.target.parentNode.appendChild(errorOverlay);
+                  }}
+                >
+                  <source src={previewVideoUrl} type="video/mp4" />
+                  <source src={previewVideoUrl} type="video/webm" />
+                  <source src={previewVideoUrl} type="video/ogg" />
+                  Your browser does not support the video tag.
+                </video>
+                
+                {/* Play button overlay */}
+                <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+                  <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center shadow-lg hover:bg-opacity-30 transition-colors">
+                    <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                  </div>
+                </div>
+                
+                {/* Video type indicator */}
+                <div className="absolute bottom-2 left-2 bg-gray-600 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                  Preview Video
+                </div>
+              </div>
             )}
           </div>
         ) : thumbnail || thumbnailUrl ? (
@@ -191,6 +280,32 @@ const LearningCard = ({
           {title}
         </h3>
 
+        {/* Progress Indicator */}
+        {progress && (
+          <div className="mb-3">
+            <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
+              <span>Your Progress</span>
+              <span>{progress.percentage || 0}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  progress.isCompleted ? 'bg-green-500' : 'bg-blue-500'
+                }`}
+                style={{ width: `${progress.percentage || 0}%` }}
+              />
+            </div>
+            {progress.isCompleted && (
+              <div className="flex items-center mt-2 text-green-600 text-sm">
+                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span className="font-medium">Completed</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Rating and Reviews */}
         {rating && (
           <div className="flex items-center mb-3">
@@ -249,6 +364,152 @@ const LearningCard = ({
 
       {/* Hover Effect Border */}
       <div className="absolute inset-0 rounded-2xl border-2 border-transparent group-hover:border-primary-200 transition-colors duration-300 pointer-events-none"></div>
+
+      {/* Preview Video Modal */}
+      {showPreview && previewVideoUrl && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowPreview(false)}
+        >
+          <div 
+            className="relative w-full max-w-4xl bg-white rounded-lg overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setShowPreview(false)}
+              className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white rounded-full p-2 hover:bg-opacity-75 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Video Content */}
+            <div className="aspect-video">
+              {previewVideoUrl.includes('youtube.com') || previewVideoUrl.includes('youtu.be') ? (
+                <iframe
+                  src={(() => {
+                    // Extract video ID from various YouTube URL formats
+                    let videoId = '';
+                    if (previewVideoUrl.includes('youtu.be/')) {
+                      videoId = previewVideoUrl.split('youtu.be/')[1].split('?')[0];
+                    } else if (previewVideoUrl.includes('youtube.com/watch?v=')) {
+                      videoId = previewVideoUrl.split('v=')[1].split('&')[0];
+                    } else if (previewVideoUrl.includes('youtube.com/embed/')) {
+                      videoId = previewVideoUrl.split('embed/')[1].split('?')[0];
+                    }
+                    
+                    // Create proper embed URL
+                    return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`;
+                  })()}
+                  title={`${title} - Preview`}
+                  className="w-full h-full"
+                  frameBorder="0"
+                  allowFullScreen
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  onError={(e) => {
+                    console.error('YouTube iframe error:', e);
+                    // Show fallback option
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'w-full h-full flex items-center justify-center bg-gray-100 text-gray-600';
+                    errorDiv.innerHTML = `
+                      <div class="text-center">
+                        <svg class="w-12 h-12 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <p class="text-sm">YouTube video failed to load</p>
+                        <button onclick="window.open('${previewVideoUrl}', '_blank')" class="mt-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
+                          Watch on YouTube
+                        </button>
+                      </div>
+                    `;
+                    e.target.parentNode.appendChild(errorDiv);
+                  }}
+                />
+              ) : previewVideoUrl.includes('vimeo.com') ? (
+                <iframe
+                  src={(() => {
+                    // Extract video ID from Vimeo URL
+                    let videoId = '';
+                    if (previewVideoUrl.includes('vimeo.com/')) {
+                      videoId = previewVideoUrl.split('vimeo.com/')[1].split('?')[0];
+                    }
+                    return `https://player.vimeo.com/video/${videoId}?autoplay=1&title=0&byline=0&portrait=0`;
+                  })()}
+                  title={`${title} - Preview`}
+                  className="w-full h-full"
+                  frameBorder="0"
+                  allowFullScreen
+                  onError={(e) => {
+                    console.error('Vimeo iframe error:', e);
+                    // Show fallback option
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'w-full h-full flex items-center justify-center bg-gray-100 text-gray-600';
+                    errorDiv.innerHTML = `
+                      <div class="text-center">
+                        <svg class="w-12 h-12 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <p class="text-sm">Vimeo video failed to load</p>
+                        <button onclick="window.open('${previewVideoUrl}', '_blank')" class="mt-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
+                          Watch on Vimeo
+                        </button>
+                      </div>
+                    `;
+                    e.target.parentNode.appendChild(errorDiv);
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full bg-black rounded-lg overflow-hidden">
+                  <video
+                    src={previewVideoUrl}
+                    controls
+                    autoPlay
+                    className="w-full h-full object-contain"
+                    poster={thumbnail || thumbnailUrl}
+                    onError={(e) => {
+                      console.error('Video load error:', e);
+                      console.error('Video URL:', previewVideoUrl);
+                      console.error('Video element:', e.target);
+                      
+                      // Hide the video and show error message
+                      e.target.style.display = 'none';
+                      const errorDiv = document.createElement('div');
+                      errorDiv.className = 'w-full h-full flex items-center justify-center bg-gray-100 text-gray-600';
+                      errorDiv.innerHTML = `
+                        <div class="text-center">
+                          <svg class="w-12 h-12 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                          </svg>
+                          <p class="text-sm">Video format not supported</p>
+                          <p class="text-xs text-gray-500 mt-1">Try uploading MP4, WebM, or OGG format</p>
+                          <button onclick="window.open('${previewVideoUrl}', '_blank')" class="mt-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
+                            Open in New Tab
+                          </button>
+                          <p class="text-xs text-gray-400 mt-2">URL: ${previewVideoUrl}</p>
+                        </div>
+                      `;
+                      e.target.parentNode.appendChild(errorDiv);
+                    }}
+                  >
+                    <source src={previewVideoUrl} type="video/mp4" />
+                    <source src={previewVideoUrl} type="video/webm" />
+                    <source src={previewVideoUrl} type="video/ogg" />
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+              )}
+            </div>
+
+            {/* Video Info */}
+            <div className="p-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+              <p className="text-sm text-gray-600">Preview Video</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

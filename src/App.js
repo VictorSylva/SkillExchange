@@ -11,6 +11,9 @@ import Connections from './pages/Connections';
 import Profile from './pages/Profile';
 import MatchDetails from './pages/MatchDetails';
 import Learning from './pages/Learning';
+import FindMentors from './pages/FindMentors';
+import LearningPaths from './pages/LearningPaths';
+import Community from './pages/Community';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 
 // Protected Route Component
@@ -155,6 +158,33 @@ function App() {
                 <ProtectedRoute>
                   <Navigation />
                   <Learning />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/find-mentors" 
+              element={
+                <ProtectedRoute>
+                  <Navigation />
+                  <FindMentors />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/learning-paths" 
+              element={
+                <ProtectedRoute>
+                  <Navigation />
+                  <LearningPaths />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/community" 
+              element={
+                <ProtectedRoute>
+                  <Navigation />
+                  <Community />
                 </ProtectedRoute>
               } 
             />

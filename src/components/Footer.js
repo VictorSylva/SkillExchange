@@ -66,7 +66,7 @@ const Footer = () => {
             <ul className="space-y-3">
               <li>
                 <Link 
-                  to="/dashboard" 
+                  to="/browse" 
                   className="text-gray-400 hover:text-primary-400 transition-colors duration-200"
                 >
                   Browse Skills
@@ -74,7 +74,7 @@ const Footer = () => {
               </li>
               <li>
                 <Link 
-                  to="/dashboard" 
+                  to="/find-mentors" 
                   className="text-gray-400 hover:text-primary-400 transition-colors duration-200"
                 >
                   Find Mentors
@@ -82,7 +82,7 @@ const Footer = () => {
               </li>
               <li>
                 <Link 
-                  to="/dashboard" 
+                  to="/learning-paths" 
                   className="text-gray-400 hover:text-primary-400 transition-colors duration-200"
                 >
                   Learning Paths
@@ -90,7 +90,7 @@ const Footer = () => {
               </li>
               <li>
                 <Link 
-                  to="/dashboard" 
+                  to="/community" 
                   className="text-gray-400 hover:text-primary-400 transition-colors duration-200"
                 >
                   Community
