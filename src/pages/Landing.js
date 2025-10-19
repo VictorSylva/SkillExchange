@@ -9,6 +9,7 @@ const Landing = () => {
   const { signInWithGoogle, signin } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -18,12 +19,40 @@ const Landing = () => {
       setError('');
       const result = await signInWithGoogle();
       if (result.success) {
-        navigate('/dashboard');
+        if (result.needsPasswordSetup) {
+          navigate('/setup-password');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         setError(result.error);
       }
     } catch (error) {
       setError('Failed to sign in with Google');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailPasswordLogin = async (e) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setError('Please enter both email and password');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setError('');
+      const result = await signin(email, password);
+      
+      if (result.success) {
+        navigate('/dashboard');
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      setError('Failed to sign in');
     } finally {
       setLoading(false);
     }
@@ -151,74 +180,77 @@ const Landing = () => {
 
             {/* Right Column - Sign Up Form */}
             <div className="max-w-md mx-auto lg:mx-0">
-              <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-2xl">
-                <div className="p-8">
-                  <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                      Welcome back
-                  </h2>
-                  <p className="text-gray-600">
-                      Sign in to continue your learning journey
-                  </p>
+        <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-2xl">
+          <form onSubmit={handleEmailPasswordLogin} className="p-8">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                Welcome back
+              </h2>
+              <p className="text-gray-600">
+                Sign in to continue your learning journey
+              </p>
+            </div>
+
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
+                <div className="flex items-center">
+                  <svg className="h-5 w-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  {error}
                 </div>
-
-                {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
-                    <div className="flex items-center">
-                      <svg className="h-5 w-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                      </svg>
-                      {error}
-                    </div>
-                  </div>
-                )}
-
-                  {/* Email Input */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email address
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="mbasitisylva@gmail.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
-                      required
-                    />
-                  </div>
-
-                  {/* Password Input */}
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Password
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="••••••••••"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
-                    />
-                  </div>
-
-                  {/* Sign In Button */}
-                  <Button
-                    onClick={handleGoogleSignIn}
-                    disabled={loading}
-                    className="w-full bg-red-500 hover:bg-red-600 text-white py-3 text-lg font-semibold mb-4"
-                    size="lg"
-                  >
-                    Sign in
-                  </Button>
-
-                  {/* Sign Up Link */}
-                  <p className="text-center text-gray-600">
-                    Don't have an account?{' '}
-                    <Link to="/register" className="text-red-500 hover:text-red-600 font-semibold">
-                      Create one here
-                  </Link>
-                </p>
               </div>
-            </Card>
+            )}
+
+            {/* Email Input */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email address
+              </label>
+              <input
+                type="email"
+                placeholder="Enter your email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+                required
+              />
+            </div>
+
+            {/* Password Input */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+                required
+              />
+            </div>
+
+            {/* Sign In Button */}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-red-500 hover:bg-red-600 text-white py-3 text-lg font-semibold mb-4"
+              size="lg"
+            >
+              {loading ? 'Signing in...' : 'Sign in'}
+            </Button>
+
+            {/* Sign Up Link */}
+            <p className="text-center text-gray-600">
+              Don't have an account?{' '}
+              <Link to="/register" className="text-red-500 hover:text-red-600 font-semibold">
+                Create one here
+              </Link>
+            </p>
+          </form>
+        </Card>
           </div>
           </div>
         </div>
@@ -316,36 +348,6 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Social Media Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h3 className="text-2xl font-bold text-gray-900 mb-8">Follow Us</h3>
-            <div className="flex justify-center space-x-8">
-              <a href="#" className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors duration-200">
-                <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-                </svg>
-              </a>
-              <a href="#" className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors duration-200">
-                <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
-                </svg>
-              </a>
-              <a href="#" className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors duration-200">
-                <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                </svg>
-              </a>
-              <a href="#" className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors duration-200">
-                <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.174-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.402.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.357-.629-2.746-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24.009 12.017 24c6.624 0 11.99-5.367 11.99-11.987C24.007 5.367 18.641.001 12.017.001z"/>
-                </svg>
-              </a>
-          </div>
-        </div>
-      </div>
-      </section>
 
       <Footer />
     </div>

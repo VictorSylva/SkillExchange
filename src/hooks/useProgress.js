@@ -47,13 +47,21 @@ export const useProgress = () => {
   }, [currentUser]);
 
   const calculateProgressPercentage = (progressData) => {
-    if (!progressData.completedLessons) return 0;
+    if (!progressData.completedLessons || progressData.completedLessons.length === 0) return 0;
     
-    // This is a simplified calculation - in a real app, you'd need the course structure
-    // For now, we'll assume each lesson is worth equal weight
-    const totalLessons = progressData.totalLessons || 1;
     const completedCount = progressData.completedLessons.length;
-    return Math.round((completedCount / totalLessons) * 100);
+    const totalLessons = progressData.totalLessons;
+    
+    // If totalLessons is not set or is 0, we can't calculate percentage accurately
+    // In this case, we'll return 0 to avoid showing incorrect percentages like 200%
+    if (!totalLessons || totalLessons <= 0) {
+      console.warn('Progress calculation: totalLessons is missing or invalid for course:', progressData.courseId);
+      return 0;
+    }
+    
+    // Cap the percentage at 100% to prevent showing more than 100%
+    const percentage = Math.round((completedCount / totalLessons) * 100);
+    return Math.min(percentage, 100);
   };
 
   const getTotalLessons = (progressData) => {

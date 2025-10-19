@@ -237,6 +237,21 @@ export const findPotentialMatches = async (currentUserId) => {
     if (skillsToLearn.length === 0 || skillsHave.length === 0) {
       return { success: true, data: [] };
     }
+
+    // First, get all existing matches to exclude already connected users
+    const existingMatchesResult = await getUserMatches(currentUserId);
+    const connectedUserIds = new Set();
+    
+    if (existingMatchesResult.success && existingMatchesResult.data) {
+      existingMatchesResult.data.forEach(match => {
+        // Add all users from matches with any status (pending, connected, etc.)
+        match.users.forEach(userId => {
+          if (userId !== currentUserId) {
+            connectedUserIds.add(userId);
+          }
+        });
+      });
+    }
     
     // Find users who have skills the current user wants to learn
     // We'll do this in two separate queries due to Firestore limitations
@@ -253,7 +268,7 @@ export const findPotentialMatches = async (currentUserId) => {
     
     // Process first query results
     querySnapshot1.forEach((doc) => {
-      if (doc.id !== currentUserId) {
+      if (doc.id !== currentUserId && !connectedUserIds.has(doc.id)) {
         const userData = doc.data();
         const commonSkillsHave = userData.skillsHave?.filter(skill => 
           skillsToLearn.includes(skill)
@@ -280,7 +295,7 @@ export const findPotentialMatches = async (currentUserId) => {
     
     // Process second query results and merge with first
     querySnapshot2.forEach((doc) => {
-      if (doc.id !== currentUserId) {
+      if (doc.id !== currentUserId && !connectedUserIds.has(doc.id)) {
         const userData = doc.data();
         const commonSkillsToLearn = userData.skillsToLearn?.filter(skill => 
           skillsHave.includes(skill)
@@ -680,7 +695,7 @@ export const getAllUserProgress = async (userId) => {
   }
 };
 
-export const markLessonComplete = async (userId, courseId, sectionIndex, lessonIndex) => {
+export const markLessonComplete = async (userId, courseId, sectionIndex, lessonIndex, courseData = null) => {
   try {
     const progressRef = doc(db, 'courseProgress', `${userId}_${courseId}`);
     const progressSnap = await getDoc(progressRef);
@@ -706,6 +721,11 @@ export const markLessonComplete = async (userId, courseId, sectionIndex, lessonI
       progressData.completedLessons.push(lessonId);
     }
     
+    // Calculate total lessons if course data is provided
+    if (courseData && courseData.sections) {
+      progressData.totalLessons = courseData.sections.reduce((total, section) => total + section.lessons.length, 0);
+    }
+    
     // Update current position to next lesson
     progressData.currentSection = sectionIndex;
     progressData.currentLesson = lessonIndex + 1;
@@ -724,16 +744,24 @@ export const markLessonComplete = async (userId, courseId, sectionIndex, lessonI
   }
 };
 
-export const updateCoursePosition = async (userId, courseId, sectionIndex, lessonIndex) => {
+export const updateCoursePosition = async (userId, courseId, sectionIndex, lessonIndex, courseData = null) => {
   try {
     const progressRef = doc(db, 'courseProgress', `${userId}_${courseId}`);
-    await setDoc(progressRef, {
+    
+    const updateData = {
       userId,
       courseId,
       currentSection: sectionIndex,
       currentLesson: lessonIndex,
       updatedAt: serverTimestamp()
-    }, { merge: true });
+    };
+    
+    // Calculate total lessons if course data is provided
+    if (courseData && courseData.sections) {
+      updateData.totalLessons = courseData.sections.reduce((total, section) => total + section.lessons.length, 0);
+    }
+    
+    await setDoc(progressRef, updateData, { merge: true });
     
     return { success: true };
   } catch (error) {

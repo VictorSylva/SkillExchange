@@ -107,7 +107,7 @@ const Footer = () => {
             <ul className="space-y-3">
               <li>
                 <Link 
-                  to="/profile" 
+                  to="/share-skills" 
                   className="text-gray-400 hover:text-primary-400 transition-colors duration-200"
                 >
                   Share Skills
@@ -115,7 +115,7 @@ const Footer = () => {
               </li>
               <li>
                 <Link 
-                  to="/profile" 
+                  to="/mentor-others" 
                   className="text-gray-400 hover:text-primary-400 transition-colors duration-200"
                 >
                   Mentor Others
@@ -123,7 +123,7 @@ const Footer = () => {
               </li>
               <li>
                 <Link 
-                  to="/profile" 
+                  to="/create-sessions" 
                   className="text-gray-400 hover:text-primary-400 transition-colors duration-200"
                 >
                   Create Sessions
@@ -131,7 +131,7 @@ const Footer = () => {
               </li>
               <li>
                 <Link 
-                  to="/profile" 
+                  to="/teacher-resources" 
                   className="text-gray-400 hover:text-primary-400 transition-colors duration-200"
                 >
                   Teacher Resources

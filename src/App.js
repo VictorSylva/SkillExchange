@@ -14,6 +14,11 @@ import Learning from './pages/Learning';
 import FindMentors from './pages/FindMentors';
 import LearningPaths from './pages/LearningPaths';
 import Community from './pages/Community';
+import ShareSkills from './pages/ShareSkills';
+import MentorOthers from './pages/MentorOthers';
+import CreateSessions from './pages/CreateSessions';
+import TeacherResources from './pages/TeacherResources';
+import SetupPassword from './pages/SetupPassword';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 
 // Protected Route Component
@@ -185,6 +190,50 @@ function App() {
                 <ProtectedRoute>
                   <Navigation />
                   <Community />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/share-skills" 
+              element={
+                <ProtectedRoute>
+                  <Navigation />
+                  <ShareSkills />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/mentor-others" 
+              element={
+                <ProtectedRoute>
+                  <Navigation />
+                  <MentorOthers />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/create-sessions" 
+              element={
+                <ProtectedRoute>
+                  <Navigation />
+                  <CreateSessions />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/teacher-resources" 
+              element={
+                <ProtectedRoute>
+                  <Navigation />
+                  <TeacherResources />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/setup-password" 
+              element={
+                <ProtectedRoute>
+                  <SetupPassword />
                 </ProtectedRoute>
               } 
             />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getUserMatches, getUserNotifications, acceptMatchRequest, rejectMatchRequest, findPotentialMatches, createMatchRequest } from '../firebase/services';
+import { getUserMatches, getUserNotifications, acceptMatchRequest, rejectMatchRequest, findPotentialMatches, createMatchRequest, getUserProfile } from '../firebase/services';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import SkillTag from '../components/ui/SkillTag';
@@ -35,8 +35,46 @@ const Connections = () => {
 
       if (matchesResult.success) {
         const allMatches = matchesResult.data || [];
-        setMatches(allMatches.filter(match => match.status === 'pending'));
-        setConnectedMatches(allMatches.filter(match => match.status === 'connected'));
+        
+        // Load user profile data for pending matches
+        const pendingMatches = allMatches.filter(match => match.status === 'pending');
+        const pendingMatchesWithUsers = await Promise.all(
+          pendingMatches.map(async (match) => {
+            const otherUserId = match.users.find(uid => uid !== currentUser.uid);
+            if (otherUserId) {
+              const userResult = await getUserProfile(otherUserId);
+              if (userResult.success) {
+                return {
+                  ...match,
+                  otherUser: userResult.data
+                };
+              }
+            }
+            return match;
+          })
+        );
+        setMatches(pendingMatchesWithUsers);
+        
+        // Load user profile data for connected matches
+        const connectedMatches = allMatches.filter(match => 
+          match.status === 'connected' || match.status === 'in_session'
+        );
+        const connectedMatchesWithUsers = await Promise.all(
+          connectedMatches.map(async (match) => {
+            const otherUserId = match.users.find(uid => uid !== currentUser.uid);
+            if (otherUserId) {
+              const userResult = await getUserProfile(otherUserId);
+              if (userResult.success) {
+                return {
+                  ...match,
+                  otherUser: userResult.data
+                };
+              }
+            }
+            return match;
+          })
+        );
+        setConnectedMatches(connectedMatchesWithUsers);
       } else {
         // Set empty arrays if no matches found
         setMatches([]);

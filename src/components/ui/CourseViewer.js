@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getCourseProgress, markLessonComplete, updateCoursePosition } from '../../firebase/services';
+import { getCourseProgress, markLessonComplete, updateCoursePosition, getUserMatches } from '../../firebase/services';
 import Card from './Card';
 import Button from './Button';
 
@@ -13,6 +13,9 @@ const CourseViewer = ({ course, onClose }) => {
   const [showSidebar, setShowSidebar] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [hasFullAccess, setHasFullAccess] = useState(false);
+  const [accessLoading, setAccessLoading] = useState(true);
+  const [connectionStatus, setConnectionStatus] = useState(null);
 
   // Load user progress on component mount
   useEffect(() => {
@@ -61,6 +64,54 @@ const CourseViewer = ({ course, onClose }) => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Check user access permissions
+  useEffect(() => {
+    const checkAccess = async () => {
+      if (!currentUser || !course) {
+        setAccessLoading(false);
+        return;
+      }
+
+      try {
+        setAccessLoading(true);
+        
+        // Check if user owns this course
+        const isOwner = course.instructorId === currentUser.uid;
+        
+        // Check if user has connection with course owner
+        let hasConnection = false;
+        let currentConnectionStatus = null;
+        if (!isOwner && course.instructorId) {
+          const matchesResult = await getUserMatches(currentUser.uid);
+          if (matchesResult.success) {
+            const existingMatch = matchesResult.data.find(match => 
+              match.users.includes(course.instructorId)
+            );
+            if (existingMatch) {
+              hasConnection = existingMatch.status === 'connected' || existingMatch.status === 'in_session';
+              currentConnectionStatus = existingMatch.status;
+            }
+          }
+        }
+
+        setConnectionStatus(currentConnectionStatus);
+
+        // User has full access if they own the course or have a connection with the owner
+        // OR if the course is marked as from connection (already verified)
+        const fullAccess = isOwner || hasConnection || course.isFromConnection;
+        setHasFullAccess(fullAccess);
+
+      } catch (error) {
+        console.error('Error checking access:', error);
+        setHasFullAccess(false);
+      } finally {
+        setAccessLoading(false);
+      }
+    };
+
+    checkAccess();
+  }, [currentUser, course]);
+
   const handleLessonComplete = async (sectionIndex, lessonIndex) => {
     if (!currentUser || saving) return;
     
@@ -72,7 +123,7 @@ const CourseViewer = ({ course, onClose }) => {
       setCompletedLessons(prev => new Set([...prev, lessonId]));
       
       // Save to Firebase
-      const result = await markLessonComplete(currentUser.uid, course.id, sectionIndex, lessonIndex);
+      const result = await markLessonComplete(currentUser.uid, course.id, sectionIndex, lessonIndex, course);
       
       if (!result.success) {
         console.error('Error saving progress:', result.error);
@@ -97,7 +148,7 @@ const CourseViewer = ({ course, onClose }) => {
     // Save position to Firebase
     if (currentUser) {
       try {
-        await updateCoursePosition(currentUser.uid, course.id, sectionIndex, lessonIndex);
+        await updateCoursePosition(currentUser.uid, course.id, sectionIndex, lessonIndex, course);
       } catch (error) {
         console.error('Error updating course position:', error);
       }
@@ -260,9 +311,12 @@ const CourseViewer = ({ course, onClose }) => {
                       return (
                         <button
                           key={lesson.id || lessonIndex}
-                          onClick={() => handleLessonSelect(sectionIndex, lessonIndex)}
+                          onClick={() => hasFullAccess ? handleLessonSelect(sectionIndex, lessonIndex) : null}
+                          disabled={!hasFullAccess && !lesson.isPreview}
                           className={`w-full text-left p-3 rounded-lg text-sm transition-colors duration-200 ${
-                            isCurrent
+                            !hasFullAccess && !lesson.isPreview
+                              ? 'text-gray-400 cursor-not-allowed opacity-60'
+                              : isCurrent
                               ? 'bg-primary-100 text-primary-700 border border-primary-200'
                               : isCompleted
                               ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
@@ -296,6 +350,14 @@ const CourseViewer = ({ course, onClose }) => {
                                 Preview
                               </span>
                             )}
+                            {!hasFullAccess && !lesson.isPreview && (
+                              <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded flex items-center gap-1">
+                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                                </svg>
+                                Locked
+                              </span>
+                            )}
                           </div>
                         </button>
                       );
@@ -311,53 +373,101 @@ const CourseViewer = ({ course, onClose }) => {
         <div className="flex-1 flex flex-col min-h-0">
           {/* Video/Content Area */}
           <div className="flex-1 bg-black min-h-0">
-            {currentLessonData ? (
+            {accessLoading ? (
+              <div className="h-full flex items-center justify-center text-white">
+                <div className="text-center">
+                  <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p>Checking access permissions...</p>
+                </div>
+              </div>
+            ) : currentLessonData ? (
               <div className="h-full flex items-center justify-center p-2 sm:p-4">
-                {currentLessonData.videoUrl ? (
-                  <div className="w-full h-full relative">
-                    {currentLessonData.videoUrl.includes('youtube.com') || currentLessonData.videoUrl.includes('youtu.be') ? (
-                      // YouTube embed
-                      <iframe
-                        src={currentLessonData.videoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
-                        title={`${currentLessonData.title} - Video`}
-                        className="w-full h-full rounded-lg"
-                        frameBorder="0"
-                        allowFullScreen
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      />
-                    ) : currentLessonData.videoUrl.includes('vimeo.com') ? (
-                      // Vimeo embed
-                      <iframe
-                        src={currentLessonData.videoUrl.replace('vimeo.com/', 'player.vimeo.com/video/')}
-                        title={`${currentLessonData.title} - Video`}
-                        className="w-full h-full rounded-lg"
-                        frameBorder="0"
-                        allowFullScreen
-                        allow="autoplay; fullscreen; picture-in-picture"
-                      />
-                    ) : (
-                      // Direct video file
-                      <video
-                        src={currentLessonData.videoUrl}
-                        controls
-                        className="w-full h-full object-contain rounded-lg"
-                        preload="metadata"
-                        playsInline
-                      >
-                        Your browser does not support the video tag.
-                      </video>
-                    )}
-                  </div>
+                {hasFullAccess ? (
+                  // Full access - show actual lesson content
+                  currentLessonData.videoUrl ? (
+                    <div className="w-full h-full relative">
+                      {currentLessonData.videoUrl.includes('youtube.com') || currentLessonData.videoUrl.includes('youtu.be') ? (
+                        // YouTube embed
+                        <iframe
+                          src={currentLessonData.videoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                          title={`${currentLessonData.title} - Video`}
+                          className="w-full h-full rounded-lg"
+                          frameBorder="0"
+                          allowFullScreen
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        />
+                      ) : currentLessonData.videoUrl.includes('vimeo.com') ? (
+                        // Vimeo embed
+                        <iframe
+                          src={currentLessonData.videoUrl.replace('vimeo.com/', 'player.vimeo.com/video/')}
+                          title={`${currentLessonData.title} - Video`}
+                          className="w-full h-full rounded-lg"
+                          frameBorder="0"
+                          allowFullScreen
+                          allow="autoplay; fullscreen; picture-in-picture"
+                        />
+                      ) : (
+                        // Direct video file
+                        <video
+                          src={currentLessonData.videoUrl}
+                          controls
+                          className="w-full h-full object-contain rounded-lg"
+                          preload="metadata"
+                          playsInline
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center text-white p-8">
+                      <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                      </div>
+                      <h3 className="text-xl font-semibold mb-2">{currentLessonData.title}</h3>
+                      <p className="text-gray-300 mb-4">No video content available</p>
+                      <p className="text-sm text-gray-400">Add a video URL to this lesson to see content here</p>
+                    </div>
+                  )
                 ) : (
-                  <div className="text-center text-white p-8">
-                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M8 5v14l11-7z"/>
+                  // Limited access - show preview only message
+                  <div className="text-center text-white p-8 max-w-md mx-auto">
+                    <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                       </svg>
                     </div>
-                    <h3 className="text-xl font-semibold mb-2">{currentLessonData.title}</h3>
-                    <p className="text-gray-300 mb-4">No video content available</p>
-                    <p className="text-sm text-gray-400">Add a video URL to this lesson to see content here</p>
+                    <h3 className="text-xl font-semibold mb-2">Preview Only</h3>
+                    <p className="text-gray-300 mb-4">
+                      {connectionStatus === 'pending' 
+                        ? 'Your connection request is pending. Once approved, you\'ll have full access to this course.'
+                        : connectionStatus === 'rejected'
+                        ? 'Your connection request was not accepted. You can only view preview content.'
+                        : 'You can only watch preview content from this course. Connect with the instructor to access the full course.'
+                      }
+                    </p>
+                    <p className="text-sm text-gray-400 mb-4">
+                      This lesson: <strong>{currentLessonData.title}</strong>
+                    </p>
+                    <div className="bg-white/10 rounded-lg p-4">
+                      <p className="text-sm text-gray-300">
+                        {connectionStatus === 'pending' ? (
+                          <>
+                            ⏳ Your connection request to <strong>{course.instructorName || 'the instructor'}</strong> is pending approval.
+                          </>
+                        ) : connectionStatus === 'rejected' ? (
+                          <>
+                            ❌ Connection request to <strong>{course.instructorName || 'the instructor'}</strong> was not accepted.
+                          </>
+                        ) : (
+                          <>
+                            💡 Connect with <strong>{course.instructorName || 'the instructor'}</strong> to unlock full access to all lessons and learning materials.
+                          </>
+                        )}
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -438,15 +548,17 @@ const CourseViewer = ({ course, onClose }) => {
                   {currentLessonData.duration && (
                     <span className="text-sm text-gray-500 whitespace-nowrap">{currentLessonData.duration}</span>
                   )}
-                  <Button
-                    onClick={() => handleLessonComplete(currentSection, currentLesson)}
-                    disabled={completedLessons.has(`${currentSection}-${currentLesson}`) || saving}
-                    loading={saving}
-                    size="sm"
-                    className="flex-shrink-0"
-                  >
-                    {completedLessons.has(`${currentSection}-${currentLesson}`) ? 'Completed' : 'Mark Complete'}
-                  </Button>
+                  {hasFullAccess && (
+                    <Button
+                      onClick={() => handleLessonComplete(currentSection, currentLesson)}
+                      disabled={completedLessons.has(`${currentSection}-${currentLesson}`) || saving}
+                      loading={saving}
+                      size="sm"
+                      className="flex-shrink-0"
+                    >
+                      {completedLessons.has(`${currentSection}-${currentLesson}`) ? 'Completed' : 'Mark Complete'}
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

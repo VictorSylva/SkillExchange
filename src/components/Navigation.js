@@ -147,18 +147,18 @@ const Navigation = () => {
                   )}
                 </Link>
                 <Link
-                  to="/profile?tab=teaching"
+                  to="/share-skills"
                   className={`font-medium transition-all duration-200 relative group ${
-                    isActive('/profile') 
+                    isActive('/share-skills') || isActive('/mentor-others') || isActive('/create-sessions') || isActive('/teacher-resources')
                       ? 'text-primary-400' 
                       : 'text-gray-300 hover:text-primary-400'
                   }`}
                 >
                   Teach
-                  {isActive('/profile') && (
+                  {(isActive('/share-skills') || isActive('/mentor-others') || isActive('/create-sessions') || isActive('/teacher-resources')) && (
                     <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-primary-400"></span>
                   )}
-                  {!isActive('/profile') && (
+                  {!(isActive('/share-skills') || isActive('/mentor-others') || isActive('/create-sessions') || isActive('/teacher-resources')) && (
                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary-400 transition-all duration-200 group-hover:w-full"></span>
                   )}
                 </Link>
@@ -269,7 +269,7 @@ const Navigation = () => {
                 Learn
               </Link>
               <Link
-                to="/profile"
+                to="/share-skills"
                 onClick={() => setIsMenuOpen(false)}
                 className="px-4 py-2 text-gray-300 hover:text-primary-400 hover:bg-gray-800 rounded-lg transition-colors duration-200"
               >
