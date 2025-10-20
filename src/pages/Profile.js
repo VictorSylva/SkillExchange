@@ -9,6 +9,9 @@ import SkillTag from '../components/ui/SkillTag';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import SkillContent from '../components/ui/SkillContent';
 import Footer from '../components/Footer';
+import { courseRefreshService } from '../services/courseRefreshService';
+import { collection, onSnapshot, doc } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 const Profile = () => {
   const { userId } = useParams();
@@ -70,21 +73,60 @@ const Profile = () => {
     }
   }, [targetUserId, isOwnProfile]);
 
+  // Real-time listener for user profile (including teaching courses)
+  const setupProfileListener = useCallback(() => {
+    if (!targetUserId) return;
+
+    const userRef = doc(db, 'users', targetUserId);
+    const unsubscribe = onSnapshot(userRef, (doc) => {
+      try {
+        if (doc.exists()) {
+          const userData = doc.data();
+          setProfile(userData);
+          
+          if (isOwnProfile) {
+            setFormData({
+              name: userData.name || '',
+              bio: userData.bio || '',
+              location: userData.location || '',
+              skillsHave: userData.skillsHave || [],
+              skillsToLearn: userData.skillsToLearn || []
+            });
+            
+            const courses = userData.teachingCourses || [];
+            console.log('Real-time update: teaching courses:', courses.length, 'courses');
+            setTeachingCourses(courses);
+          }
+          
+          setLoading(false);
+        } else {
+          setError('Profile not found');
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error in profile listener:', error);
+        setError('Failed to load profile');
+        setLoading(false);
+      }
+    });
+
+    return unsubscribe;
+  }, [targetUserId, isOwnProfile]);
+
   useEffect(() => {
     if (isOwnProfile && userProfile) {
-      setProfile(userProfile);
-      setFormData({
-        name: userProfile.name || '',
-        bio: userProfile.bio || '',
-        location: userProfile.location || '',
-        skillsHave: userProfile.skillsHave || [],
-        skillsToLearn: userProfile.skillsToLearn || []
-      });
-      setLoading(false);
+      // For own profile, use the real-time listener to get fresh data
+      const unsubscribe = setupProfileListener();
+      return () => {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      };
     } else if (targetUserId) {
+      // For other users' profiles, use manual loading
       loadProfile();
     }
-  }, [userId, userProfile, isOwnProfile, targetUserId, loadProfile]);
+  }, [userId, userProfile, isOwnProfile, targetUserId, loadProfile, setupProfileListener]);
 
   const handleChange = (e) => {
     setFormData(prev => ({
@@ -222,6 +264,9 @@ const Profile = () => {
         setTeachingCourses(updatedCourses);
         console.log('Local state updated with', updatedCourses.length, 'courses');
         
+        // Trigger course refresh in Dashboard and other components
+        courseRefreshService.triggerRefresh();
+        
         alert('Course saved successfully!'); // Temporary alert for feedback
         setShowSkillContentForm(false);
         setEditingCourse(null);
@@ -260,6 +305,9 @@ const Profile = () => {
 
         if (!result.success) {
           setError(result.error || 'Failed to delete course');
+        } else {
+          // Trigger course refresh in Dashboard and other components
+          courseRefreshService.triggerRefresh();
         }
       } catch (error) {
         setError('Failed to delete course');
@@ -568,16 +616,6 @@ const Profile = () => {
                 </p>
               </div>
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={async () => {
-                    setLoading(true);
-                    await loadProfile();
-                    setLoading(false);
-                  }}
-                >
-                  Refresh
-                </Button>
                 <Button onClick={() => { setShowSkillContentForm(true); setEditingCourse(null); }}>
                   Create New Course
                 </Button>

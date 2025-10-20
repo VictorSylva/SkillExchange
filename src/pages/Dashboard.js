@@ -10,6 +10,9 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Footer from '../components/Footer';
 import LearningCard from '../components/ui/LearningCard';
 import CourseViewer from '../components/ui/CourseViewer';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { courseRefreshService } from '../services/courseRefreshService';
 
 const Dashboard = () => {
   const { currentUser, userProfile } = useAuth();
@@ -44,6 +47,54 @@ const Dashboard = () => {
     }
   }, []);
 
+  // Real-time listener for public courses
+  const setupPublicCoursesListener = useCallback(() => {
+    if (!currentUser?.uid) return;
+
+    const usersRef = collection(db, 'users');
+    const unsubscribe = onSnapshot(usersRef, async (snapshot) => {
+      try {
+        const allCourses = [];
+        
+        snapshot.forEach((userDoc) => {
+          const userData = userDoc.data();
+          if (userData.teachingCourses && Array.isArray(userData.teachingCourses)) {
+            userData.teachingCourses.forEach((course) => {
+              if (course.isPublic) {
+                allCourses.push({
+                  ...course,
+                  instructorId: userDoc.id,
+                  instructorName: userData.name || 'Unknown Instructor',
+                  instructorTitle: userData.bio || 'Instructor'
+                });
+              }
+            });
+          }
+        });
+        
+        // Sort by creation date (newest first)
+        allCourses.sort((a, b) => {
+          const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt);
+          const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt);
+          return dateB - dateA;
+        });
+        
+        setPublicCourses(allCourses);
+        setCoursesLoading(false);
+      } catch (error) {
+        console.error('Error in public courses listener:', error);
+        // Fallback to manual loading if listener fails
+        loadPublicCourses();
+      }
+    }, (error) => {
+      console.error('Firestore listener error:', error);
+      // Fallback to manual loading if listener setup fails
+      loadPublicCourses();
+    });
+
+    return unsubscribe;
+  }, [currentUser?.uid, loadPublicCourses]);
+
   const loadConnectedUsersCourses = useCallback(async () => {
     if (!currentUser?.uid) return;
     
@@ -60,6 +111,75 @@ const Dashboard = () => {
       setConnectedUsersCourses([]);
     }
   }, [currentUser?.uid]);
+
+  // Real-time listener for connected users' courses
+  const setupConnectedCoursesListener = useCallback(() => {
+    if (!currentUser?.uid) return;
+
+    const usersRef = collection(db, 'users');
+    const unsubscribe = onSnapshot(usersRef, async (snapshot) => {
+      try {
+        // First, get all matches for the current user
+        const matchesResult = await getUserMatches(currentUser.uid);
+        if (!matchesResult.success) {
+          setConnectedUsersCourses([]);
+          return;
+        }
+        
+        const allMatches = matchesResult.data || [];
+        const connectedMatches = allMatches.filter(match => match.status === 'connected');
+        
+        if (connectedMatches.length === 0) {
+          setConnectedUsersCourses([]);
+          return;
+        }
+        
+        // Get all connected user IDs
+        const connectedUserIds = connectedMatches.map(match => 
+          match.requesterId === currentUser.uid ? match.targetUserId : match.requesterId
+        );
+        
+        // Get courses from all connected users
+        const allCourses = [];
+        snapshot.forEach((userDoc) => {
+          if (connectedUserIds.includes(userDoc.id)) {
+            const userData = userDoc.data();
+            const userCourses = userData.teachingCourses || [];
+            
+            // Add all courses (both public and private) from connected users
+            userCourses.forEach(course => {
+              allCourses.push({
+                ...course,
+                instructorId: userDoc.id,
+                instructorName: userData.name || 'Unknown Instructor',
+                instructorTitle: userData.bio || 'Instructor',
+                isFromConnection: true // Mark as from connection
+              });
+            });
+          }
+        });
+        
+        // Sort by creation date (newest first)
+        allCourses.sort((a, b) => {
+          const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt);
+          const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt);
+          return dateB - dateA;
+        });
+        
+        setConnectedUsersCourses(allCourses);
+      } catch (error) {
+        console.error('Error in connected courses listener:', error);
+        // Fallback to manual loading if listener fails
+        loadConnectedUsersCourses();
+      }
+    }, (error) => {
+      console.error('Firestore listener error for connected courses:', error);
+      // Fallback to manual loading if listener setup fails
+      loadConnectedUsersCourses();
+    });
+
+    return unsubscribe;
+  }, [currentUser?.uid, loadConnectedUsersCourses]);
 
   const loadMatches = useCallback(async () => {
     try {
@@ -96,13 +216,51 @@ const Dashboard = () => {
     }
   }, [currentUser.uid]);
 
+  // Manual refresh function for courses
+  const refreshCourses = useCallback(() => {
+    console.log('Manually refreshing courses...');
+    // The real-time listeners will automatically update when data changes
+    // This function is mainly for UI feedback
+    setCoursesLoading(true);
+    setTimeout(() => {
+      setCoursesLoading(false);
+    }, 500);
+  }, []);
+
   useEffect(() => {
     if (currentUser && userProfile) {
       loadMatches();
-      loadPublicCourses();
-      loadConnectedUsersCourses();
+      
+      // Set up real-time listeners for courses
+      const unsubscribePublicCourses = setupPublicCoursesListener();
+      const unsubscribeConnectedCourses = setupConnectedCoursesListener();
+      
+      // Subscribe to manual refresh events
+      const unsubscribeRefresh = courseRefreshService.subscribe(refreshCourses);
+      
+      // Fallback timeout to prevent infinite loading
+      const fallbackTimeout = setTimeout(() => {
+        if (coursesLoading) {
+          console.log('Fallback: Loading courses manually due to timeout');
+          loadPublicCourses();
+          loadConnectedUsersCourses();
+        }
+      }, 10000); // 10 second timeout
+      
+      return () => {
+        clearTimeout(fallbackTimeout);
+        if (unsubscribePublicCourses) {
+          unsubscribePublicCourses();
+        }
+        if (unsubscribeConnectedCourses) {
+          unsubscribeConnectedCourses();
+        }
+        if (unsubscribeRefresh) {
+          unsubscribeRefresh();
+        }
+      };
     }
-  }, [currentUser, userProfile, loadMatches, loadPublicCourses, loadConnectedUsersCourses]);
+  }, [currentUser, userProfile, loadMatches, setupPublicCoursesListener, setupConnectedCoursesListener, refreshCourses, coursesLoading, loadPublicCourses, loadConnectedUsersCourses]);
 
   const handleCreateMatch = async (matchedUserId) => {
     try {
@@ -172,12 +330,21 @@ const Dashboard = () => {
 
 
   if (loading) {
+    console.log('Dashboard: Main loading state active');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     );
   }
+
+  console.log('Dashboard: Rendering with', {
+    publicCourses: publicCourses.length,
+    connectedCourses: connectedUsersCourses.length,
+    coursesLoading,
+    matches: matches.length,
+    notifications: notifications.length
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
